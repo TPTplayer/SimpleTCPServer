@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
-using System.Windows.Forms;
-using System.Xml.Schema;
 
 namespace LocalServer {
     public partial class TcpServer {
