@@ -134,7 +134,7 @@ namespace LocalServer {
                     client.PacketReceivedEvent += PacketReceivedEvent;
 
                     _connectedClientList.Add(client);
-                    MessageEvent(this, "MESSAGE", "connected: " + clientEndpoint.Address.ToString());
+                    MessageEvent(this, "MESSAGE", "connected: " + clientEndpoint.ToString());
                 }
 
                 e.AcceptSocket = null;
@@ -143,10 +143,6 @@ namespace LocalServer {
             catch(Exception ex) {
                 MessageEvent(this, "EXCEPTION", ex.Message);
             }
-        }
-
-        private void Client_PacketReceivedEvent(object sender, byte[] packet, IPEndPoint endPoint) {
-            throw new NotImplementedException();
         }
     }
 }
