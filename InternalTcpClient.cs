@@ -8,6 +8,9 @@ namespace LocalServer {
             public event MessageHandler MessageEvent;
             public event EventHandler_PacketReceived PacketReceivedEvent;
 
+            public delegate void EventHandler_ConnectionFailure(object sender);
+            public event EventHandler_ConnectionFailure ConnectionFailureEvent;
+
             private Socket _socket;
             private string _ip;
             private int _port;
@@ -60,16 +63,15 @@ namespace LocalServer {
             }
 
             public bool Send(byte[] packet, int packetLen) {
-                try {
-                    SocketAsyncEventArgs args = new SocketAsyncEventArgs();
-                    byte[] buffer = new byte[packetLen];
+                byte[] buffer = new byte[packetLen];
 
+                try {                     
                     Buffer.BlockCopy(packet, 0, buffer, 0, packetLen);
-                    args.SetBuffer(buffer, 0, packetLen);
-                    _socket.SendAsync(args);
+                    _socket.Send(buffer);
                 }
                 catch(Exception ex) {
                     MessageEvent(this, "EXCEPTION", ex.Message);
+                    if (ConnectionFailureEvent != null) ConnectionFailureEvent(this);
                     return false;
                 }
                 return true;

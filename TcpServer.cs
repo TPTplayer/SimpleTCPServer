@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
+using System.Security.AccessControl;
 using System.Text;
 
 namespace LocalServer {
@@ -14,6 +15,9 @@ namespace LocalServer {
 
         public delegate void EventHandler_PacketReceived(object sender, byte[] packet, IPEndPoint endPoint);
         public event EventHandler_PacketReceived PacketReceivedEvent;
+
+        public delegate void EventHandler_ConnectionFailure(IPEndPoint endPoint);
+        public event EventHandler_ConnectionFailure ClientConnectionFailureEvent;
 
         private Socket _socket;
         private int _port;
@@ -67,7 +71,7 @@ namespace LocalServer {
                 buffer = Encoding.Default.GetBytes(packet);
                 client = GetRemoteClient(destination);
                 if(client == null) {
-                    MessageEvent(this, "ERR", "EndPoint - " + destination.ToString() + " is not connected");
+                    MessageEvent(this, "ERROR", "EndPoint - " + destination.ToString() + " is not connected");
                     return false;
                 }
                 res = client.Send(buffer, buffer.Length);
@@ -87,7 +91,7 @@ namespace LocalServer {
             try {
                 client = GetRemoteClient(destination);
                 if (client == null) {
-                    MessageEvent(this, "ERR", "EndPoint - " + destination.ToString() + " is not connected");
+                    MessageEvent(this, "ERROR", "EndPoint - " + destination.ToString() + " is not connected");
                     return false;
                 }
                 res = client.Send(packet, packetLen);
@@ -132,6 +136,7 @@ namespace LocalServer {
                     client = new InternalTcpClient(clientSocket);
                     client.MessageEvent += MessageEvent;
                     client.PacketReceivedEvent += PacketReceivedEvent;
+                    client.ConnectionFailureEvent += ConnectionFailureHandle;
 
                     _connectedClientList.Add(client);
                     MessageEvent(this, "MESSAGE", "connected: " + clientEndpoint.ToString());
@@ -139,6 +144,25 @@ namespace LocalServer {
 
                 e.AcceptSocket = null;
                 _socket.AcceptAsync(e);
+            }
+            catch(Exception ex) {
+                MessageEvent(this, "EXCEPTION", ex.Message);
+            }
+        }
+
+        private void ConnectionFailureHandle(object sender) {
+            var tcpClient = (InternalTcpClient)sender;
+
+            try {
+                if (ClientConnectionFailureEvent != null) ClientConnectionFailureEvent(tcpClient.endPoint);
+                tcpClient.Close();
+
+                for (int i = 0; i < _connectedClientList.Count; i++) {
+                    if (_connectedClientList[i].endPoint.Equals(tcpClient.endPoint)) {
+                        _connectedClientList.RemoveAt(i);
+                        break;
+                    }
+                }
             }
             catch(Exception ex) {
                 MessageEvent(this, "EXCEPTION", ex.Message);
